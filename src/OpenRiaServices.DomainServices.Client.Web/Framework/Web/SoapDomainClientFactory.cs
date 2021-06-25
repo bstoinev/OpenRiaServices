@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
+using System.Text;
 using OpenRiaServices.DomainServices.Client.Web.Internal;
 
 namespace OpenRiaServices.DomainServices.Client.Web
@@ -51,7 +52,7 @@ namespace OpenRiaServices.DomainServices.Client.Web
         }
 
         /// <summary>
-        /// Generates a <see cref="BasicHttpBinding"/> which is configured to speak to the
+        /// Generates a <see cref="CustomBinding"/> which is configured to speak to the
         /// "soap" endpoint
         /// </summary>
         /// <param name="endpoint">Absolute service URI without protocol suffix such as "/soap" or "/binary"</param>
@@ -59,22 +60,30 @@ namespace OpenRiaServices.DomainServices.Client.Web
         /// <returns>A <see cref="Binding"/> which is compatible with soap endpoint</returns>
         protected override Binding CreateBinding(Uri endpoint, bool requiresSecureEndpoint)
         {
-            BasicHttpBinding binding = new BasicHttpBinding();
+            var binding = new CustomBinding();
+
+            var textMessageEncodingEl = new TextMessageEncodingBindingElement(MessageVersion.Soap11, Encoding.UTF8);
+            binding.Elements.Add(textMessageEncodingEl);
+
+            var element = new HttpTransportBindingElement();
+
             if (endpoint.Scheme == Uri.UriSchemeHttps)
             {
-                binding.Security.Mode = BasicHttpSecurityMode.Transport;
+                element = new HttpsTransportBindingElement();
             }
             else if (requiresSecureEndpoint)
             {
                 throw new InvalidOperationException("use https to connect to secure endpoint");
             }
 
-            binding.MaxReceivedMessageSize = int.MaxValue;
+            element.MaxReceivedMessageSize = int.MaxValue;
 #if SILVERLIGHT
-            binding.EnableHttpCookieContainer =  CookieContainer != null;
+            elements.EnableHttpCookieContainer =  CookieContainer != null;
 #else
-            binding.AllowCookies = CookieContainer != null;
+            element.AllowCookies = CookieContainer != null;
 #endif
+            binding.Elements.Add(element);
+
             return binding;
         }
     }
