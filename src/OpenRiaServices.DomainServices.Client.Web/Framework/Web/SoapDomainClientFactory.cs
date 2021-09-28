@@ -51,6 +51,7 @@ namespace OpenRiaServices.DomainServices.Client.Web
             }
         }
 
+#if OPENSILVER
         /// <summary>
         /// Generates a <see cref="CustomBinding"/> which is configured to speak to the
         /// "soap" endpoint
@@ -77,14 +78,41 @@ namespace OpenRiaServices.DomainServices.Client.Web
             }
 
             element.MaxReceivedMessageSize = int.MaxValue;
-#if SILVERLIGHT
-            elements.EnableHttpCookieContainer =  CookieContainer != null;
-#else
             element.AllowCookies = CookieContainer != null;
-#endif
+
             binding.Elements.Add(element);
 
             return binding;
         }
+#else
+        /// <summary>
+        /// Generates a <see cref="BasicHttpBinding"/> which is configured to speak to the
+        /// "soap" endpoint
+        /// </summary>
+        /// <param name="endpoint">Absolute service URI without protocol suffix such as "/soap" or "/binary"</param>
+        /// <param name="requiresSecureEndpoint"><c>true</c> if communication must be secured, otherwise <c>false</c></param>
+        /// <returns>A <see cref="Binding"/> which is compatible with soap endpoint</returns>
+        protected override Binding CreateBinding(Uri endpoint, bool requiresSecureEndpoint)
+        {
+            BasicHttpBinding binding = new BasicHttpBinding();
+
+            if (endpoint.Scheme == Uri.UriSchemeHttps)
+            {
+                binding.Security.Mode = BasicHttpSecurityMode.Transport;
+            }
+            else if (requiresSecureEndpoint)
+            {
+                throw new InvalidOperationException("use https to connect to secure endpoint");
+            }
+
+            binding.MaxReceivedMessageSize = int.MaxValue;
+#if SILVERLIGHT
+            binding.EnableHttpCookieContainer = CookieContainer != null;
+#else
+            binding.AllowCookies = CookieContainer != null;
+#endif
+            return binding;
+        }
+#endif
     }
 }
